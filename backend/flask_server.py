@@ -62,7 +62,6 @@ def new_session():
         return jsonify({"Error: NO GOAL"}), 400
     
     curId = dbh.insertSessionMeta(data['duration'], data['goal'])
-    dbh.getSessionList()
     try:
         with open(CURRENTSESSION, 'w') as f:
             json.dump({'curId' : curId, 'active' : True}, f, ensure_ascii=False, indent=4)
@@ -185,7 +184,6 @@ def save_html():
         print('send stream')
         msg_q.put(json.dumps(sseData))
         dbh.insertEvent(sid, eventType, page_url, score, topic)
-        dbh.getEventList(sid)
         return jsonify({"status": "success", "message": "HTML received"})
     
     return jsonify({"status": "error", "message": "analysis failed."}), 400
