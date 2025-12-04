@@ -193,14 +193,14 @@ def save_html():
 @app.route('/api/webpage-analysis/stream')
 def stream():
     print('stream connection')
-    data = {
+    def event_stream():
+        # [핵심] 무한 루프를 돌면서 큐를 감시합니다.
+        data = {
             "is_focused": True,
             "score": 1.0,
             "topic": "Connection Established"
         }
-    yield f"data: {json.dumps(data)}\n\n"
-    def event_stream():
-        # [핵심] 무한 루프를 돌면서 큐를 감시합니다.
+        yield f"data: {json.dumps(data)}\n\n"
         while True:
             # 1. queue.get()은 메시지가 들어올 때까지 여기서 '코드 실행을 멈추고 대기'합니다.
             #    (CPU를 쓰지 않고 효율적으로 기다립니다)
