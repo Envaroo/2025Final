@@ -203,11 +203,7 @@ def stream():
             # 2. 메시지가 도착하면 yield로 프론트엔드에 발사!
             yield f"data: {msg}\n\n"
             
-    return Response(event_stream(), mimetype='text/event-stream', headers={
-            'Cache-Control': 'no-cache',
-            'X-Accel-Buffering': 'no',  # nginx 사용 시 버퍼링 방지
-            'Connection': 'keep-alive'
-        })
+    return Response(stream_with_context(event_stream()), mimetype='text/event-stream')
 
 
 
