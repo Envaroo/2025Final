@@ -1,0 +1,4 @@
+ai/emb/*
+data.db
+settings.json
+*.pyc
