@@ -193,6 +193,12 @@ def save_html():
 @app.route('/api/webpage-analysis/stream')
 def stream():
     print('stream connection')
+    data = {
+            "is_focused": True,
+            "score": 1.0,
+            "topic": "Connection Established"
+        }
+    yield f"data: {json.dumps(data)}\n\n"
     def event_stream():
         # [핵심] 무한 루프를 돌면서 큐를 감시합니다.
         while True:
