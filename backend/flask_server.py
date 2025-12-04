@@ -1,5 +1,5 @@
 # 📄 backend/flask_server.py (Waitress 적용)
-from flask import Flask, request, jsonify, abort, Response, render_template, send_from_directory
+from flask import Flask, request, jsonify, abort, Response, render_template, send_from_directory, stream_with_context
 from flask_cors import CORS
 from waitress import serve  # ✅ 추가
 import os
