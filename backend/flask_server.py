@@ -198,13 +198,17 @@ def stream():
         while True:
             # 1. queue.get()은 메시지가 들어올 때까지 여기서 '코드 실행을 멈추고 대기'합니다.
             #    (CPU를 쓰지 않고 효율적으로 기다립니다)
-            print('got stream')
             msg = msg_q.get()
-            
+            print('got stream')
             # 2. 메시지가 도착하면 yield로 프론트엔드에 발사!
             yield f"data: {msg}\n\n"
             
-    return Response(event_stream(), mimetype='text/event-stream')
+    return Response(event_stream(), mimetype='text/event-stream', headers={
+            'Cache-Control': 'no-cache',
+            'X-Accel-Buffering': 'no',  # nginx 사용 시 버퍼링 방지
+            'Connection': 'keep-alive'
+        })
+
 
 
 @app.route('/api/get_session_list', methods=['GET'])

@@ -100,6 +100,17 @@ export function TimerPage({
       // 이미 시작된 세션을 재개
       setIsRunning(true);
 
+      // 재시작 API 호출
+      fetch('/api/continue_session')
+        .then(response => {
+          if (response.ok) {
+            console.log('세션 재시작 전송 완료');
+          }
+        })
+        .catch(error => {
+          console.error('세션 재시작 전송 오류:', error);
+        });
+
       // 알림 권한 요청
       if ('Notification' in window && Notification.permission === 'default') {
         Notification.requestPermission();
@@ -109,6 +120,17 @@ export function TimerPage({
 
   const handlePause = () => {
     setIsRunning(false);
+
+    // 일시정지 API 호출
+    fetch('/api/pause_session')
+      .then(response => {
+        if (response.ok) {
+          console.log('세션 일시정지 전송 완료');
+        }
+      })
+      .catch(error => {
+        console.error('세션 일시정지 전송 오류:', error);
+      });
   };
 
   const handleReset = () => {
