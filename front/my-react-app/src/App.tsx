@@ -30,7 +30,7 @@ export default function App() {
   const [lastDistractionNotification, setLastDistractionNotification] = useState<number>(0);
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0);
 
-  // 기본 ���이머 시간 불러오기 및 타이머 복원
+  // 기본 이머 시간 불러오기 및 타이머 복원
   useEffect(() => {
     const savedDefaultMinutes = localStorage.getItem('defaultMinutes');
     if (savedDefaultMinutes) {
@@ -181,13 +181,16 @@ export default function App() {
     let eventSource: EventSource | null = null;
     let reconnectTimeoutId: NodeJS.Timeout | null = null;
     let connectionTimeoutId: NodeJS.Timeout | null = null;
+    let firstMessageTimeoutId: NodeJS.Timeout | null = null;
     let isCleaningUp = false;
     let currentReconnectAttempts = 0;
+    let hasReceivedFirstMessage = false;
 
     const MAX_RECONNECT_ATTEMPTS = 5;
     const INITIAL_RECONNECT_DELAY = 1000; // 1초
     const MAX_RECONNECT_DELAY = 30000; // 30초
     const CONNECTION_TIMEOUT = 10000; // 10초
+    const FIRST_MESSAGE_TIMEOUT = 15000; // 15초 - 첫 메시지 대기 시간
 
     const calculateReconnectDelay = (attempt: number) => {
       // Exponential backoff: 1초, 2초, 4초, 8초, 16초, 최대 30초
@@ -203,6 +206,7 @@ export default function App() {
       
       console.log(`SSE 연결 시도 (${currentReconnectAttempts + 1}/${MAX_RECONNECT_ATTEMPTS}): ${sseEndpoint}`);
       setSSEStatus('connecting');
+      hasReceivedFirstMessage = false;
 
       try {
         // 기존 연결이 있다면 정리
@@ -214,10 +218,10 @@ export default function App() {
         // 새 EventSource 생성
         eventSource = new EventSource(sseEndpoint);
 
-        // 연결 타임아웃 설정
+        // 연결 타임아웃 설정 (HTTP 연결 자체의 타임아웃)
         connectionTimeoutId = setTimeout(() => {
           if (eventSource && eventSource.readyState !== EventSource.OPEN) {
-            console.warn('SSE 연결 타임아웃');
+            console.warn('SSE HTTP 연결 타임아웃 (onopen 미발생)');
             if (eventSource) {
               eventSource.close();
             }
@@ -225,24 +229,50 @@ export default function App() {
           }
         }, CONNECTION_TIMEOUT);
 
-        // 연결 성공 핸들러
+        // 연결 성공 핸들러 (HTTP 연결만 성공)
         eventSource.onopen = () => {
-          console.log('SSE 연결 성공, ReadyState:', eventSource?.readyState);
-          setSSEStatus('connected');
-          currentReconnectAttempts = 0; // 재연결 카운터 리셋
-          setReconnectAttempts(0);
+          console.log('SSE HTTP 연결 열림, ReadyState:', eventSource?.readyState);
           
           // 연결 타임아웃 해제
           if (connectionTimeoutId) {
             clearTimeout(connectionTimeoutId);
             connectionTimeoutId = null;
           }
+
+          // 첫 메시지 대기 타임아웃 설정
+          // 연결은 됐지만 실제 메시지를 받지 못하는 경우 감지
+          firstMessageTimeoutId = setTimeout(() => {
+            if (!hasReceivedFirstMessage) {
+              console.warn('SSE 첫 메시지 타임아웃 (연결은 됐으나 메시지 미수신)');
+              if (eventSource) {
+                eventSource.close();
+              }
+              handleReconnect();
+            }
+          }, FIRST_MESSAGE_TIMEOUT);
         };
 
-        // 메시지 수신 핸들러
+        // 메시지 수신 핸들러 - 실제 연결 성공 판단
         eventSource.onmessage = (event) => {
           try {
             console.log('SSE 메시지 수신:', event.data);
+            
+            // 첫 메시지를 받았을 때만 connected 상태로 변경
+            if (!hasReceivedFirstMessage) {
+              hasReceivedFirstMessage = true;
+              setSSEStatus('connected');
+              currentReconnectAttempts = 0; // 재연결 카운터 리셋
+              setReconnectAttempts(0);
+              
+              // 첫 메시지 타임아웃 해제
+              if (firstMessageTimeoutId) {
+                clearTimeout(firstMessageTimeoutId);
+                firstMessageTimeoutId = null;
+              }
+              
+              console.log('✅ SSE 연결 완전히 성공 (첫 메시지 수신)');
+            }
+
             const data = JSON.parse(event.data);
             
             // 서버에서 { is_focused, score, topic } 형태로 전송
@@ -269,10 +299,15 @@ export default function App() {
         eventSource.onerror = (error) => {
           console.error('SSE 연결 오류, ReadyState:', eventSource?.readyState, error);
           
-          // 연결 타임아웃 해제
+          // 모든 타임아웃 해제
           if (connectionTimeoutId) {
             clearTimeout(connectionTimeoutId);
             connectionTimeoutId = null;
+          }
+          
+          if (firstMessageTimeoutId) {
+            clearTimeout(firstMessageTimeoutId);
+            firstMessageTimeoutId = null;
           }
 
           // EventSource는 자동으로 재연결을 시도하지만, 
@@ -342,6 +377,11 @@ export default function App() {
       if (connectionTimeoutId) {
         clearTimeout(connectionTimeoutId);
         connectionTimeoutId = null;
+      }
+
+      if (firstMessageTimeoutId) {
+        clearTimeout(firstMessageTimeoutId);
+        firstMessageTimeoutId = null;
       }
 
       // EventSource 정리
