@@ -128,9 +128,9 @@ class FocusAnalysisProcess(multiprocessing.Process):
             try:              
                 # 결과 전송
                 result = {
-                    "is_focused": score >= 0.28,
+                    "is_focused": score >= 0.2394,
                     "score": score,
-                    "matched_query": expanded_queries[maxidx] if score >= 0.28 else "Distractive content",
+                    "matched_query": expanded_queries[maxidx] if score >= 0.2394 else "Distractive content",
                     "elapsed": elapsed
                 }
                 self.result_queue.put(result)

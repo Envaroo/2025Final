@@ -174,7 +174,7 @@ def save_html():
         if(result['data']['matched_query'] == 'Error'): 
             eventType = True
 
-        emoji = "🔴" if score < 0.25 else "🟡" if score < 0.30 else "🟢"
+        emoji = "🔴" if score < 0.2 else "🟡" if score < 0.3 else "🟢"
         print(f"{emoji}: \t{score}\t{topic[:20]}\t{elapsed}s")
         sseData = {
             "is_focused": eventType, 
